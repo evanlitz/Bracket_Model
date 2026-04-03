@@ -1,0 +1,72 @@
+# ── Data ──────────────────────────────────────────────────────────────────────
+data/*
+!data/README.md
+
+# ── Model artifacts & outputs ─────────────────────────────────────────────────
+*.pkl
+*.joblib
+outputs/*
+!outputs/.gitkeep
+
+# ── Claude ────────────────────────────────────────────────────────────────────
+.claude/
+.mcp.json
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+app/frontend/node_modules/
+app/frontend/dist/
+app/frontend/.vite/
+
+# ── Logs & temp files ─────────────────────────────────────────────────────────
+*.log
+*.tmp
+pcts.txt
+
+# ── Credentials & secrets ─────────────────────────────────────────────────────
+cookies.json
+.env
+.env.*
+
+# ── One-off root-level output files ───────────────────────────────────────────
+bracket_regions_percentages_sorted_by_f4_tiebreak_prevcol.json
+
+# ── One-off debug / fix scripts ───────────────────────────────────────────────
+debug_*.py
+fix_*.py
+
+# ── Root-level single-year / test scrapers (moved or superseded) ───────────────
+/scrape_1_players.py
+/scrape_1_players_2013.py
+/scrape_1_scouting.py
+/scrape_1_team.py
+/scrape_players_1year.py
+/scrape_conferences_2026.py
+/scrape_gameplan_2026.py
+/scrape_players_2026.py
+/scrape_scouting_2026.py
+/scrape_all_years.py
+/scrape_conferences.py
+/scrape_players_all_years.py
+/scrape_scouting.py
+
+# ── Private notes ─────────────────────────────────────────────────────────────
+analysis/linkedin_findings.md
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo

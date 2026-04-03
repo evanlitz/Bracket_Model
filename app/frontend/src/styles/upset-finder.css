@@ -1,0 +1,560 @@
+/* ══════════════════════════════════════════════════════
+   UPSET FINDER
+   ══════════════════════════════════════════════════════ */
+
+.uf-viewer {
+  padding: 4px 32px 64px;
+}
+
+/* ── Header ──────────────────────────────────────────── */
+
+.uf-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 10px 0 18px;
+  border-bottom: 1px solid rgba(201,168,76,0.12);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.uf-header-title {
+  font-size: 1.1rem;
+  color: var(--gold-bright);
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.uf-header-sub {
+  font-size: 0.62rem;
+  color: var(--cream-dim);
+  opacity: 0.5;
+  letter-spacing: 0.06em;
+}
+
+.uf-header-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.uf-stat-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-card);
+  border: var(--border-thin);
+  border-radius: 4px;
+  padding: 8px 16px;
+  min-width: 72px;
+}
+
+.uf-stat-val {
+  font-size: 1.4rem;
+  color: var(--gold-bright);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.uf-stat-label {
+  font-size: 0.55rem;
+  color: var(--cream-dim);
+  opacity: 0.5;
+  letter-spacing: 0.06em;
+  margin-top: 3px;
+}
+
+/* ── Tab bar ─────────────────────────────────────────── */
+
+.uf-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding-bottom: 0;
+}
+
+.uf-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--cream-dim);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 8px 16px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.15s;
+  margin-bottom: -1px;
+}
+
+.uf-tab:hover { color: var(--cream); }
+.uf-tab.active {
+  color: var(--gold-bright);
+  border-bottom-color: var(--gold);
+}
+
+/* ── Filters ─────────────────────────────────────────── */
+
+.uf-section { }
+
+.uf-filters {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.uf-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.uf-filter-label {
+  font-size: 0.55rem;
+  color: var(--cream-dim);
+  opacity: 0.45;
+  letter-spacing: 0.12em;
+}
+
+.uf-filter-btns {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.uf-filter-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--cream-dim);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 4px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.uf-filter-btn:hover { border-color: var(--gold-dim); color: var(--cream); }
+.uf-filter-btn.active {
+  background: rgba(201,168,76,0.1);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+/* ── Card grid ───────────────────────────────────────── */
+
+.uf-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.uf-cin-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+/* ── Base card ───────────────────────────────────────── */
+
+.uf-card {
+  background: var(--bg-card);
+  border: var(--border-thin);
+  border-radius: 4px;
+  padding: 11px 13px 10px;
+  box-shadow: var(--glow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.uf-card-upset   { border-color: rgba(74,222,128,0.25); }
+.uf-card-held    { border-color: rgba(255,255,255,0.06); }
+.uf-card-upcoming { border-color: rgba(201,168,76,0.2); }
+
+/* ── Card header ─────────────────────────────────────── */
+
+.uf-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.uf-card-tag {
+  font-size: 0.55rem;
+  color: var(--cream-dim);
+  opacity: 0.4;
+  letter-spacing: 0.08em;
+}
+
+/* ── Tier badges ─────────────────────────────────────── */
+
+.uf-tier {
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.uf-tier-high     { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+.uf-tier-watch    { background: rgba(251,191,36,0.12);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+.uf-tier-possible { background: rgba(96,165,250,0.1);   color: #60a5fa; border: 1px solid rgba(96,165,250,0.2); }
+.uf-tier-long     { background: transparent; color: var(--cream-dim); border: 1px solid rgba(255,255,255,0.1); opacity: 0.6; }
+
+/* ── Alert card: matchup rows ────────────────────────── */
+
+.uf-matchup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.uf-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.uf-seed {
+  font-size: 0.62rem;
+  color: var(--cream-dim);
+  opacity: 0.55;
+  min-width: 16px;
+}
+
+.uf-seed-und {
+  color: var(--gold-dim);
+  opacity: 0.9;
+}
+
+.uf-name {
+  font-size: 0.78rem;
+  color: var(--cream-dim);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.uf-name-und {
+  color: var(--cream);
+  font-weight: 600;
+}
+
+.uf-score {
+  font-size: 0.65rem;
+  color: var(--cream);
+  font-weight: 600;
+}
+
+/* ── Probability bar ─────────────────────────────────── */
+
+.uf-prob-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.uf-prob-bar-track {
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.uf-prob-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-dim), var(--gold-bright));
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.uf-prob-label {
+  font-size: 0.6rem;
+  color: var(--gold-bright);
+  font-weight: 700;
+}
+
+/* ── Card footer / status ────────────────────────────── */
+
+.uf-card-footer {
+  border-top: 1px solid rgba(255,255,255,0.04);
+  padding-top: 6px;
+}
+
+.uf-status { font-size: 0.62rem; letter-spacing: 0.04em; }
+.uf-status-upcoming { color: var(--gold-dim); opacity: 0.75; }
+.uf-status-upset    { color: #4ade80; }
+.uf-status-held     { color: var(--cream-dim); opacity: 0.45; }
+
+/* ── Cinderella card ─────────────────────────────────── */
+
+.uf-cin-card { gap: 8px; }
+
+.uf-cin-positive { border-color: rgba(201,168,76,0.25); }
+.uf-cin-neutral  { opacity: 0.65; }
+
+.uf-cin-badge {
+  font-size: 0.52rem;
+  color: var(--gold-bright);
+  background: rgba(201,168,76,0.12);
+  border: 1px solid rgba(201,168,76,0.3);
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+}
+
+.uf-cin-name {
+  font-size: 1rem;
+  color: var(--cream);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.uf-cin-stat { display: flex; flex-direction: column; gap: 5px; }
+
+.uf-cin-stat-label {
+  font-size: 0.58rem;
+  color: var(--gold-dim);
+  opacity: 0.7;
+  letter-spacing: 0.08em;
+}
+
+.uf-cin-bars { display: flex; flex-direction: column; gap: 4px; }
+
+.uf-cin-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.uf-cin-bar-label {
+  font-size: 0.55rem;
+  color: var(--cream-dim);
+  opacity: 0.5;
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.uf-cin-bar-track {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.uf-cin-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.uf-cin-bar-model { background: linear-gradient(90deg, var(--gold-dim), var(--gold-bright)); }
+.uf-cin-bar-avg   { background: rgba(255,255,255,0.2); }
+
+.uf-cin-bar-pct {
+  font-size: 0.62rem;
+  color: var(--cream-dim);
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.uf-cin-pct-hot { color: var(--gold-bright); font-weight: 700; }
+
+.uf-cin-edge {
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.uf-edge-pos { color: var(--gold-bright); }
+.uf-edge-neg { color: var(--cream-dim); opacity: 0.5; }
+
+.uf-cin-secondary {
+  font-size: 0.58rem;
+  color: var(--cream-dim);
+  opacity: 0.4;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  padding-top: 5px;
+}
+
+.uf-cin-intro {
+  font-size: 0.65rem;
+  color: var(--cream-dim);
+  opacity: 0.5;
+  margin-bottom: 14px;
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+/* ── Calibration strip ───────────────────────────────── */
+
+.uf-calibration {
+  background: var(--bg-card);
+  border: var(--border-thin);
+  border-radius: 4px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  box-shadow: var(--glow-card);
+}
+
+.uf-cal-title {
+  font-size: 0.58rem;
+  color: var(--cream-dim);
+  opacity: 0.5;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+.uf-cal-buckets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 640px) { .uf-cal-buckets { grid-template-columns: repeat(2,1fr); } }
+
+.uf-cal-bucket { display: flex; flex-direction: column; gap: 4px; }
+
+.uf-cal-bucket-label {
+  font-size: 0.62rem;
+  color: var(--gold-dim);
+  letter-spacing: 0.06em;
+}
+
+.uf-cal-bucket-bar-track {
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.uf-cal-bucket-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-dim), var(--gold-bright));
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.uf-cal-bucket-expected {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255,255,255,0.3);
+  transform: translateX(-50%);
+}
+
+.uf-cal-bucket-stat {
+  font-size: 0.65rem;
+  color: var(--cream);
+}
+
+/* ── Historical table ────────────────────────────────── */
+
+.uf-hist-table-wrap {
+  overflow-x: auto;
+  border-radius: 4px;
+  border: var(--border-thin);
+  background: var(--bg-card);
+  box-shadow: var(--glow-card);
+}
+
+.uf-hist-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+}
+
+.uf-hist-table thead tr {
+  background: var(--bg-card-inner);
+  border-bottom: 1px solid rgba(201,168,76,0.12);
+}
+
+.uf-hist-table th {
+  font-size: 0.6rem;
+  color: var(--gold-dim);
+  letter-spacing: 0.08em;
+  padding: 9px 12px;
+  text-align: left;
+}
+
+.uf-hist-row {
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: background 0.1s;
+}
+
+.uf-hist-row:hover { background: rgba(255,255,255,0.02); }
+.uf-hist-row:last-child { border-bottom: none; }
+.uf-hist-upset { background: rgba(74,222,128,0.03); }
+
+.uf-hist-table td {
+  padding: 7px 12px;
+  font-size: 0.7rem;
+  color: var(--cream-dim);
+}
+
+.uf-hist-seed {
+  font-size: 0.62rem;
+  color: var(--cream-dim);
+  opacity: 0.5;
+  margin-right: 3px;
+}
+
+.uf-hist-team { color: var(--cream); }
+.uf-hist-vs   { opacity: 0.4; }
+
+.uf-prob-hot   { color: var(--gold-bright); font-weight: 700; }
+.uf-result-upset { color: #4ade80; font-weight: 600; }
+.uf-result-held  { color: var(--cream-dim); opacity: 0.45; }
+
+/* ── Loading / error / empty ─────────────────────────── */
+
+.uf-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: var(--cream-dim);
+  font-size: 0.82rem;
+}
+
+.uf-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(201,168,76,0.2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: uf-spin 0.8s linear infinite;
+}
+
+@keyframes uf-spin { to { transform: rotate(360deg); } }
+
+.uf-error {
+  color: var(--red-bright);
+  font-size: 0.75rem;
+  padding: 12px 16px;
+  border: 1px solid rgba(248,113,113,0.3);
+  border-radius: 2px;
+  background: rgba(248,113,113,0.05);
+  margin: 16px 0;
+}
+
+.uf-empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--cream-dim);
+  opacity: 0.45;
+  font-size: 0.72rem;
+}
