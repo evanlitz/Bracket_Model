@@ -1,6 +1,6 @@
 # data/
 
-This directory holds all raw and intermediate data for the bracket model. It is **not tracked by git** — you must populate it yourself using the scraping scripts in `scripts/`.
+This directory holds all raw and intermediate data for the bracket model. It is **not tracked by git** — you must populate it yourself using the scraping scripts in `scripts/`. Note that a Kenpom Premium subscription is required to attain this data, which can be found on kenpom.com
 
 ---
 
