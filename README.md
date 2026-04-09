@@ -4,6 +4,10 @@ A machine learning model for predicting NCAA tournament outcomes, trained on 23 
 
 ---
 
+![Bracket Model MC](monte-carlo-bracket-sim.png)
+
+![Bracket Model MC](team-matchup.png)
+
 ## How It Works
 
 The model is a `HistGradientBoostingClassifier` trained on per-matchup feature differentials. For each game, both teams' pre-tournament stats are differenced (Team A minus Team B), producing a single feature vector that the model uses to predict the win probability.
