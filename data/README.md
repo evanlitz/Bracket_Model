@@ -4,6 +4,18 @@ This directory holds all raw and intermediate data for the bracket model. It is 
 
 ---
 
+## Data Sources
+
+| Source | What it provides | Auth |
+|--------|-----------------|------|
+| [KenPom](https://kenpom.com) (premium subscription) | Pre-tournament efficiency ratings (`summary{YY}_pt.csv`), scouting reports (Four Factors + advanced stats), player roster stats, game-by-game logs | Cookie export from Chrome — see Quick Start |
+| [Sports Reference CBB](https://www.sports-reference.com/cbb/) | Conference standings | None |
+| NCAA (manual) | `bracket.csv` tournament results — used as labels only, never as features | None |
+
+Reproducibility requires a KenPom premium account. The Sports Reference and bracket data are freely available.
+
+---
+
 ## Directory Structure
 
 ```

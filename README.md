@@ -76,70 +76,114 @@ app/
   frontend/             Vite + vanilla JS similarity UI
 config/                 Reference JSON files (name map, coaches, tournament dates)
 analysis/               Feature importance findings, outcome profiles
-data/                   Raw data — NOT included, see data/README.md
+data/                   Raw data — NOT included (see data/README.md for sources)
 ```
 
 ---
 
-## Setup
+## Quick Start
 
 ### Prerequisites
 
 - Python 3.10+
 - Node.js 18+
-- KenPom subscription (required for scraping — data not included)
+- [KenPom premium subscription](https://kenpom.com) (required for scraping — data is not included in this repo)
 
-### Install
+### 1. Install dependencies
 
 ```bash
-# Python dependencies
+# Python
 pip install -r app/requirements.txt
 
-# Frontend dependencies
-cd app/frontend && npm install
+# Frontend
+cd app/frontend && npm install && cd ../..
 ```
 
-### Data
+### 2. Export your KenPom cookies
 
-Raw data (KenPom CSVs, scouting parquets, player parquets) is not included in this repository due to licensing. See [`data/README.md`](data/README.md) for the full directory structure and scraping instructions.
+The scraping scripts authenticate with KenPom using your browser session cookies. No username/password is stored.
 
----
+1. Log into [kenpom.com](https://kenpom.com) in Chrome
+2. Install a cookie export extension — [Cookie-Editor](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) works well
+3. Navigate to any KenPom page, open Cookie-Editor, and click **Export → Export as JSON**
+4. Save the file as **`cookies.json`** in the project root (same level as `README.md`)
 
-## Running
+> `cookies.json` is gitignored. Never commit it.
 
-### Backend API
+### 3. Download KenPom pre-tournament summary CSVs
+
+These must be downloaded manually — they are the pre-tournament snapshots that serve as model features.
+
+For each season you want (2002–2026, skip 2020):
+
+1. Go to `kenpom.com/summary.php?y=YEAR` while logged in
+2. Click **Export** (top of the table) to download the CSV
+3. Save it as `data/{year}/summary{YY}_pt.csv`
+   - Example: `data/2025/summary25_pt.csv`
+
+> The `_pt` suffix is important — it signals a pre-tournament snapshot. Post-tournament CSVs have updated ratings that would introduce data leakage.
+
+### 4. Scrape remaining data
+
+Run these from the project root in order. Each script is resumable — it skips files that already exist.
 
 ```bash
-# From project root
+# Game-by-game logs (rolling momentum features) — ~2–3 hrs
+python scripts/scrape_all_years.py
+
+# Scouting reports + Four Factors — ~2–3 hrs
+python scripts/scrape_scouting.py
+
+# Player roster stats — ~2–3 hrs
+python scripts/scrape_players_all_years.py
+
+# Conference standings (Sports Reference, no login required)
+python scripts/scrape_conferences.py
+
+# Build coach map from raw coach data
+python scripts/build_coach_map.py
+```
+
+Each scraper prints progress and writes errors to a `.log` file in the project root if anything fails. Re-running will resume where it left off.
+
+### 5. Precompute artifacts
+
+```bash
+# Delete stale cache (required after any data changes)
+rm data/datacache.pkl
+
+# Leave-year-out bracket simulations (used by the similarity UI)
+python scripts/precompute_brackets.py
+
+# Feature importance by round (~5–10 min, optional)
+python scripts/precompute_feature_importance.py
+```
+
+### 6. Run the app
+
+```bash
+# Backend (from project root)
 uvicorn app.backend.main:app --reload --app-dir .
 # → http://localhost:8000
-```
 
-### Frontend
-
-```bash
-cd app/frontend
-npm run dev
+# Frontend (separate terminal)
+cd app/frontend && npm run dev
 # → http://localhost:5173
 ```
+
+Open `http://localhost:5173` — the backend warms up the data cache on first start (~30s).
 
 ### Pipeline Scripts
 
 ```bash
-# Rebuild feature importance JSON (~5-10 min)
-python scripts/precompute_feature_importance.py
-
-# Precompute leave-year-out bracket predictions
-python scripts/precompute_brackets.py
-
-# Generate 2026 predictions
+# Generate 2026 win probability predictions
 python scripts/predict_2026.py
 
 # Audit team name normalization across years
 python scripts/audit_names.py
 ```
 
-To force a full data cache rebuild, delete `data/datacache.pkl` and restart the backend.
+> To force a full data cache rebuild at any time, delete `data/datacache.pkl` and restart the backend.
 
 ---
 
