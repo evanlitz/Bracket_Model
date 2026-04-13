@@ -3,6 +3,7 @@ import StatCompare from './StatCompare'
 import BracketPath from './BracketPath'
 import PlayerRoster from './PlayerRoster'
 import { resultBadgeClass, resultLabel } from './utils'
+import TeamAvatar from './TeamAvatar'
 
 // Tier color for the combined score badge
 function tierStyle(score) {
@@ -47,11 +48,14 @@ export default function MatchCard({ match, rank, queryStats = {}, queryRoster = 
     <div className="match-card">
       {/* ── Header ────────────────────────────────────────────────── */}
       <div className="match-card-header">
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <TeamAvatar team={team} size={36} />
+          <div>
           <div className="match-rank mono">#{rank} Match</div>
           <div className="match-team-name display">{team}</div>
           <div className="match-year-conf mono">
             {year} · {region || conf || ''}
+          </div>
           </div>
         </div>
         <div className="badges">

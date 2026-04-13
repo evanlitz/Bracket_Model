@@ -1,5 +1,6 @@
 import { resultBadgeClass } from './utils'
 import PlayerRoster from './PlayerRoster'
+import TeamAvatar from './TeamAvatar'
 
 const TEAM_DISPLAY = [
   { key: 'AdjEM',        label: 'Adj EM',  fmt: v => v?.toFixed(1) },
@@ -29,7 +30,10 @@ export default function QueryCard({ profile }) {
 
   return (
     <div className="query-card">
-      <div className="team-name-large display">{team}</div>
+      <div className="query-card-team-header">
+        <TeamAvatar team={team} size={48} />
+        <div className="team-name-large display">{team}</div>
+      </div>
       <div className="team-meta">
         <span className="badge mono">{year}</span>
         {seed && <span className="badge seed-badge">#{seed} Seed</span>}

@@ -1,21 +1,16 @@
 import { useState, useEffect, useMemo } from 'react'
+import TeamAvatar from './TeamAvatar'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const ROUND_ORDER  = ['R64','R32','S16','E8','F4','NCG']
 const ROUND_NUM    = { R64:1, R32:2, S16:3, E8:4, F4:5, NCG:6 }
 const CURRENT_YEAR = 2026
 
-// Which round is the "meaningful milestone" for each seed group
-function targetRound(seed) {
-  if (seed <= 4)  return 's16'
-  if (seed <= 6)  return 'f4'
-  if (seed <= 9)  return 'e8'
-  if (seed <= 12) return 's16'
-  return 'r32'
-}
-
-const ROUND_LABELS = { r32:'R32', s16:'S16', e8:'E8', f4:'F4', ncg:'NCG', champ:'Champ' }
+const CIN_MILESTONES = [
+  { key: 's16', label: 'Sweet 16' },
+  { key: 'e8',  label: 'Elite 8'  },
+  { key: 'f4',  label: 'Final Four' },
+]
 
 function pct(v, decimals = 0) {
   if (v == null) return '—'
@@ -32,34 +27,49 @@ function tier(prob) {
 // ── Upset Alert Card ──────────────────────────────────────────────────────────
 
 function AlertCard({ game }) {
-  const { favorite, favorite_seed, underdog, underdog_seed, seed_diff,
+  const { favorite, favorite_seed, underdog, underdog_seed,
           model_upset_prob, upset_happened, model_called_upset,
           completed, round_name, region, year,
           score_fav, score_und } = game
 
   const t = tier(model_upset_prob)
   const barW = Math.round(model_upset_prob * 100)
+  const favWon = completed && !upset_happened
+  const undWon = completed && upset_happened
 
   return (
     <div className={`uf-card uf-alert-card ${completed ? (upset_happened ? 'uf-card-upset' : 'uf-card-held') : 'uf-card-upcoming'}`}>
 
       <div className="uf-card-header">
         <span className="uf-card-tag mono">{region} · {round_name} · {year}</span>
-        <span className={`uf-tier ${t.cls} mono`}>{t.label}</span>
+        <div className="uf-card-header-badges">
+          {model_called_upset && (
+            <span className="uf-model-called mono">★ MODEL</span>
+          )}
+          <span className={`uf-tier ${t.cls} mono`}>{t.label}</span>
+        </div>
       </div>
 
       <div className="uf-matchup">
         <div className="uf-team uf-team-fav">
           <span className="uf-seed mono">{favorite_seed}</span>
+          <TeamAvatar team={favorite} size={22} />
           <span className="uf-name">{favorite}</span>
-          {completed && !upset_happened && score_fav != null &&
-            <span className="uf-score mono">{score_fav}</span>}
+          {completed && (
+            <span className={`uf-score mono ${favWon ? 'uf-score-win' : 'uf-score-lose'}`}>
+              {score_fav ?? '—'}
+            </span>
+          )}
         </div>
         <div className="uf-team uf-team-und">
           <span className="uf-seed uf-seed-und mono">{underdog_seed}</span>
+          <TeamAvatar team={underdog} size={22} />
           <span className="uf-name uf-name-und">{underdog}</span>
-          {completed && upset_happened && score_und != null &&
-            <span className="uf-score mono">{score_und}</span>}
+          {completed && (
+            <span className={`uf-score mono ${undWon ? 'uf-score-win' : 'uf-score-lose'}`}>
+              {score_und ?? '—'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -78,12 +88,12 @@ function AlertCard({ game }) {
         )}
         {completed && upset_happened && (
           <span className="uf-status uf-status-upset mono">
-            ✓ UPSET — {underdog} {score_und != null ? `${score_und}–${score_fav}` : 'won'}
+            ✓ UPSET — {underdog} wins {score_und != null && score_fav != null ? `${score_und}–${score_fav}` : ''}
           </span>
         )}
         {completed && !upset_happened && (
           <span className="uf-status uf-status-held mono">
-            ✗ FAVORITE HELD — {favorite} {score_fav != null ? `${score_fav}–${score_und}` : 'won'}
+            ✗ FAVORITE HELD — {favorite} wins {score_fav != null && score_und != null ? `${score_fav}–${score_und}` : ''}
           </span>
         )}
       </div>
@@ -93,103 +103,59 @@ function AlertCard({ game }) {
 
 // ── Cinderella Card ───────────────────────────────────────────────────────────
 
-function CinderellaCard({ team, baselines, rank }) {
+function CinderellaCard({ team, baselines }) {
   const { team: name, seed, region, adv } = team
   const bl = baselines[String(seed)] || {}
-  const rk = targetRound(seed)
-  const rkLabel = ROUND_LABELS[rk] || rk.toUpperCase()
 
-  const simPct = adv[rk]    ?? 0
-  const blPct  = bl[rk]     ?? 0
-  const edge   = simPct - blPct
+  const milestones = CIN_MILESTONES.map(({ key, label }) => {
+    const sim  = adv[key] ?? 0
+    const avg  = bl[key]  ?? 0
+    return { key, label, sim, avg, edge: sim - avg }
+  })
 
-  // Secondary stat: F4 for seeds 9-12, NCG for 5-8
-  const rk2      = seed <= 8 ? 'champ' : 'f4'
-  const rkLabel2 = ROUND_LABELS[rk2]
-  const simPct2  = adv[rk2] ?? 0
-  const blPct2   = bl[rk2]  ?? 0
-
-  const edgePositive = edge > 0.005
+  const s16Edge = milestones[0].edge
+  const isCinderella = s16Edge > 0.005
 
   return (
-    <div className={`uf-card uf-cin-card ${edgePositive ? 'uf-cin-positive' : 'uf-cin-neutral'}`}>
+    <div className={`uf-card uf-cin-card ${isCinderella ? 'uf-cin-positive' : 'uf-cin-neutral'}`}>
 
-      <div className="uf-card-header">
-        <span className="uf-card-tag mono">{seed}-seed · {region}</span>
-        {edgePositive && <span className="uf-cin-badge mono">CINDERELLA</span>}
-      </div>
-
-      <div className="uf-cin-name display">{name}</div>
-
-      <div className="uf-cin-stat">
-        <div className="uf-cin-stat-label mono">{rkLabel} odds</div>
-        <div className="uf-cin-bars">
-          <div className="uf-cin-bar-row">
-            <span className="uf-cin-bar-label mono">MODEL</span>
-            <div className="uf-cin-bar-track">
-              <div className="uf-cin-bar-fill uf-cin-bar-model" style={{ width: `${Math.min(simPct * 300, 100)}%` }} />
-            </div>
-            <span className={`uf-cin-bar-pct mono ${edgePositive ? 'uf-cin-pct-hot' : ''}`}>{pct(simPct)}</span>
-          </div>
-          <div className="uf-cin-bar-row">
-            <span className="uf-cin-bar-label mono">AVG</span>
-            <div className="uf-cin-bar-track">
-              <div className="uf-cin-bar-fill uf-cin-bar-avg" style={{ width: `${Math.min(blPct * 300, 100)}%` }} />
-            </div>
-            <span className="uf-cin-bar-pct mono">{pct(blPct)}</span>
+      {/* Logo + name header */}
+      <div className="uf-cin-team-header">
+        <TeamAvatar team={name} size={40} />
+        <div className="uf-cin-team-info">
+          <div className="uf-cin-name display">{name}</div>
+          <div className="uf-cin-team-meta mono">
+            #{seed} seed · {region}
+            {isCinderella && <span className="uf-cin-badge">CINDERELLA</span>}
           </div>
         </div>
-        <div className={`uf-cin-edge mono ${edge > 0 ? 'uf-edge-pos' : edge < 0 ? 'uf-edge-neg' : ''}`}>
-          {edge > 0 ? '+' : ''}{pct(edge)} model edge
-        </div>
       </div>
 
-      <div className="uf-cin-secondary mono">
-        {rkLabel2}: model {pct(simPct2)} vs avg {pct(blPct2)}
-      </div>
-    </div>
-  )
-}
-
-// ── Calibration strip ─────────────────────────────────────────────────────────
-
-function CalibrationStrip({ games }) {
-  const buckets = [
-    { label: '20–30%', min: 0.20, max: 0.30 },
-    { label: '30–40%', min: 0.30, max: 0.40 },
-    { label: '40–50%', min: 0.40, max: 0.50 },
-    { label: '50%+',   min: 0.50, max: 1.01 },
-  ]
-
-  return (
-    <div className="uf-calibration">
-      <div className="uf-cal-title mono">MODEL CALIBRATION — when model gives underdog X%, how often does the upset happen?</div>
-      <div className="uf-cal-buckets">
-        {buckets.map(b => {
-          const inBucket = games.filter(g =>
-            g.completed && g.model_upset_prob >= b.min && g.model_upset_prob < b.max
-          )
-          const happened = inBucket.filter(g => g.upset_happened).length
-          const rate = inBucket.length > 0 ? happened / inBucket.length : null
-          return (
-            <div key={b.label} className="uf-cal-bucket">
-              <div className="uf-cal-bucket-label mono">{b.label}</div>
-              <div className="uf-cal-bucket-bar-track">
-                <div className="uf-cal-bucket-bar" style={{ width: `${Math.round((rate ?? 0) * 100)}%` }} />
-                {(() => {
-                  const mean = inBucket.length > 0
-                    ? inBucket.reduce((s, g) => s + g.model_upset_prob, 0) / inBucket.length
-                    : (b.min + b.max) / 2
-                  return <div className="uf-cal-bucket-expected" style={{ left: `${mean * 100}%` }} />
-                })()}
+      {/* Three milestone sections */}
+      {milestones.map(({ key, label, sim, avg, edge }) => (
+        <div key={key} className="uf-cin-milestone">
+          <div className="uf-cin-stat-label mono">{label}</div>
+          <div className="uf-cin-bars">
+            <div className="uf-cin-bar-row">
+              <span className="uf-cin-bar-label mono">MODEL</span>
+              <div className="uf-cin-bar-track">
+                <div className="uf-cin-bar-fill uf-cin-bar-model" style={{ width: `${Math.min(sim * 300, 100)}%` }} />
               </div>
-              <div className="uf-cal-bucket-stat mono">
-                {rate != null ? `${pct(rate)} (${happened}/${inBucket.length})` : '—'}
-              </div>
+              <span className={`uf-cin-bar-pct mono ${edge > 0.02 ? 'uf-cin-pct-hot' : ''}`}>{pct(sim)}</span>
             </div>
-          )
-        })}
-      </div>
+            <div className="uf-cin-bar-row">
+              <span className="uf-cin-bar-label mono">AVG</span>
+              <div className="uf-cin-bar-track">
+                <div className="uf-cin-bar-fill uf-cin-bar-avg" style={{ width: `${Math.min(avg * 300, 100)}%` }} />
+              </div>
+              <span className="uf-cin-bar-pct mono">{pct(avg)}</span>
+            </div>
+          </div>
+          <div className={`uf-cin-edge mono ${edge > 0 ? 'uf-edge-pos' : edge < 0 ? 'uf-edge-neg' : ''}`}>
+            {edge > 0 ? '+' : ''}{pct(edge)} vs seed avg
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -211,11 +177,6 @@ export default function UpsetFinder() {
 
   // Cinderella filter
   const [cinPositiveOnly, setCinPositiveOnly] = useState(false)
-
-  // History filters
-  const [histRound,   setHistRound]   = useState('all')
-  const [histSeedMin, setHistSeedMin] = useState(3)  // min seed_diff
-  const [histSort,    setHistSort]    = useState({ col: 'model_upset_prob', dir: 'desc' })
 
   useEffect(() => {
     fetch('/api/upsets')
@@ -266,38 +227,12 @@ export default function UpsetFinder() {
     return simData.teams
       .filter(t => t.seed != null && t.seed >= 5)
       .map(t => {
-        const rk    = targetRound(t.seed)
-        const simPct = t.adv[rk] ?? 0
-        const blPct  = (bl[String(t.seed)] || {})[rk] ?? 0
-        return { ...t, _edge: simPct - blPct }
+        const s16sim = t.adv['s16'] ?? 0
+        const s16avg = (bl[String(t.seed)] || {})['s16'] ?? 0
+        return { ...t, _s16: s16sim, _edge: s16sim - s16avg }
       })
-      .sort((a, b) => b._edge - a._edge)
+      .sort((a, b) => b._s16 - a._s16)   // highest S16 chance first
   }, [simData, upsetData])
-
-  const histGames = useMemo(() => {
-    if (!upsetData) return []
-    const sorted = upsetData.upset_games
-      .filter(g => g.year !== CURRENT_YEAR && g.completed)
-      .filter(g => histRound === 'all' || g.round_name === histRound)
-      .filter(g => g.seed_diff >= histSeedMin)
-      .slice()
-      .sort((a, b) => {
-        const { col, dir } = histSort
-        let av = a[col], bv = b[col]
-        if (typeof av === 'string') av = av.toLowerCase(), bv = bv.toLowerCase()
-        if (av < bv) return dir === 'asc' ? -1 : 1
-        if (av > bv) return dir === 'asc' ? 1 : -1
-        return 0
-      })
-    return sorted
-  }, [upsetData, histRound, histSeedMin, histSort])
-
-  function toggleHistSort(col) {
-    setHistSort(prev => ({
-      col,
-      dir: prev.col === col && prev.dir === 'desc' ? 'asc' : 'desc'
-    }))
-  }
 
   const cinFiltered = useMemo(() => {
     return cinPositiveOnly ? cinderellas.filter(t => t._edge > 0.005) : cinderellas
@@ -306,11 +241,21 @@ export default function UpsetFinder() {
   // ── Stats summary ────────────────────────────────────────────────────────────
 
   const alertStats = useMemo(() => {
-    const completed = alerts2026.filter(g => g.completed)
-    const upsets    = completed.filter(g => g.upset_happened)
-    const called    = upsets.filter(g => g.model_called_upset)
-    const upcoming  = alerts2026.filter(g => !g.completed)
-    return { total: alerts2026.length, completed: completed.length, upsets: upsets.length, called: called.length, upcoming: upcoming.length }
+    const completed   = alerts2026.filter(g => g.completed)
+    const upsets      = completed.filter(g => g.upset_happened)
+    const backed      = completed.filter(g => g.model_called_upset)   // model gave und > 50%
+    const backedHit   = backed.filter(g => g.upset_happened)          // backed + happened
+    const highAlert   = completed.filter(g => g.model_upset_prob >= 0.40)
+    const highHit     = highAlert.filter(g => g.upset_happened)
+    const upcoming    = alerts2026.filter(g => !g.completed)
+    return {
+      upsets:    upsets.length,
+      backed:    backed.length,
+      backedHit: backedHit.length,
+      highAlert: highAlert.length,
+      highHit:   highHit.length,
+      upcoming:  upcoming.length,
+    }
   }, [alerts2026])
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -339,22 +284,22 @@ export default function UpsetFinder() {
         <div className="uf-header-stats">
           <div className="uf-stat-pill">
             <span className="uf-stat-val mono">{alertStats.upsets}</span>
-            <span className="uf-stat-label mono">upsets so far</span>
+            <span className="uf-stat-label mono">upsets happened</span>
           </div>
           <div className="uf-stat-pill">
-            <span className="uf-stat-val mono">{alertStats.called}/{alertStats.upsets}</span>
-            <span className="uf-stat-label mono">model called</span>
+            <span className="uf-stat-val mono">{alertStats.backedHit}/{alertStats.backed}</span>
+            <span className="uf-stat-label mono">model backed hit</span>
           </div>
           <div className="uf-stat-pill">
-            <span className="uf-stat-val mono">{alertStats.upcoming}</span>
-            <span className="uf-stat-label mono">alerts remaining</span>
+            <span className="uf-stat-val mono">{alertStats.highHit}/{alertStats.highAlert}</span>
+            <span className="uf-stat-label mono">high alerts fired</span>
           </div>
         </div>
       </div>
 
       {/* Tab bar */}
       <div className="uf-tabs">
-        {[['alerts','2026 Alerts'], ['cinderella','Cinderella Watch'], ['history','Historical']].map(([key, label]) => (
+        {[['alerts','2026 Alerts'], ['cinderella','Cinderella Watch']].map(([key, label]) => (
           <button key={key} className={`uf-tab${tab === key ? ' active' : ''}`} onClick={() => handleTab(key)}>
             {label}
           </button>
@@ -434,78 +379,6 @@ export default function UpsetFinder() {
         </div>
       )}
 
-      {/* ── Historical ──────────────────────────────────────────────────── */}
-      {tab === 'history' && upsetData && (
-        <div className="uf-section">
-          <CalibrationStrip games={upsetData.upset_games.filter(g => g.year !== CURRENT_YEAR && g.completed)} />
-
-          <div className="uf-filters">
-            <div className="uf-filter-group">
-              <span className="uf-filter-label mono">ROUND</span>
-              <div className="uf-filter-btns">
-                {['all',...ROUND_ORDER].map(r => (
-                  <button key={r} className={`uf-filter-btn${histRound === (r==='all'?'all':r) ? ' active' : ''}`}
-                    onClick={() => setHistRound(r === 'all' ? 'all' : r)}>
-                    {r === 'all' ? 'All' : r}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="uf-filter-group">
-              <span className="uf-filter-label mono">MIN SEED DIFF</span>
-              <div className="uf-filter-btns">
-                {[[2,'2+'],[3,'3+'],[5,'5+'],[7,'7+']].map(([v,l]) => (
-                  <button key={v} className={`uf-filter-btn${histSeedMin === v ? ' active' : ''}`} onClick={() => setHistSeedMin(v)}>{l}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="uf-hist-table-wrap">
-            <table className="uf-hist-table">
-              <thead>
-                <tr>
-                  {[['year','Year'],['round_name','Round'],['matchup','Matchup'],['model_upset_prob','Model Odds'],['upset_happened','Result']].map(([col, label]) => {
-                    const sortable = col !== 'matchup'
-                    const active   = histSort.col === col
-                    return (
-                      <th key={col} className="mono"
-                        style={sortable ? { cursor: 'pointer', userSelect: 'none' } : {}}
-                        onClick={sortable ? () => toggleHistSort(col) : undefined}
-                      >
-                        {label}{active ? (histSort.dir === 'desc' ? ' ▾' : ' ▴') : (sortable ? ' ·' : '')}
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {histGames.slice(0, 120).map(g => (
-                  <tr key={`${g.year}-${g.match_id}`} className={`uf-hist-row ${g.upset_happened ? 'uf-hist-upset' : 'uf-hist-held'}`}>
-                    <td className="mono">{g.year}</td>
-                    <td className="mono">{g.round_name}</td>
-                    <td>
-                      <span className="uf-hist-seed mono">({g.underdog_seed})</span>
-                      <span className="uf-hist-team">{g.underdog}</span>
-                      <span className="uf-hist-vs mono"> vs </span>
-                      <span className="uf-hist-seed mono">({g.favorite_seed})</span>
-                      <span className="uf-hist-team">{g.favorite}</span>
-                    </td>
-                    <td className={`mono ${g.model_upset_prob >= 0.4 ? 'uf-prob-hot' : ''}`}>
-                      {pct(g.model_upset_prob)}
-                    </td>
-                    <td className="mono">
-                      {g.upset_happened
-                        ? <span className="uf-result-upset">UPSET ✓</span>
-                        : <span className="uf-result-held">held ✗</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
     </div>
   )

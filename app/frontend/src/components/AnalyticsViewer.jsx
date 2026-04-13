@@ -264,10 +264,23 @@ function YearlyFeatureChart({ data, tracked }) {
   const W = 900, H = 240, ML = 44, MR = 16, MT = 16, MB = 28
   const cW = W - ML - MR, cH = H - MT - MB
 
-  const xOf = i   => ML + (i / (years.length - 1)) * cW
-  const yOf = v   => MT + cH / 2 - v * (cH / 2) * 2.2  // centred on 0, ±1 at edges
+  // Dynamic y range: find actual max |correlation| across all selected features
+  const allVals = []
+  years.forEach(yr => {
+    const yrData = data[String(yr)] || []
+    tracked.forEach(f => {
+      if (!selected.includes(f.feature)) return
+      const entry = yrData.find(e => e.feature === f.feature)
+      if (entry?.correlation != null) allVals.push(entry.correlation)
+    })
+  })
+  const rawMax = allVals.length ? Math.max(...allVals.map(Math.abs)) : 0.35
+  const absMax = Math.max(0.35, Math.ceil(rawMax * 10 + 1) / 10)
 
+  const xOf = i => ML + (i / (years.length - 1)) * cW
+  const yOf = v => MT + cH / 2 - (v / absMax) * (cH / 2) * 0.92
   const zeroY = yOf(0)
+  const yAxisVals = [-absMax, -(absMax / 2), 0, absMax / 2, absMax]
 
   return (
     <div className="an-chart-card">
@@ -296,14 +309,14 @@ function YearlyFeatureChart({ data, tracked }) {
         <line x1={ML} x2={W - MR} y1={zeroY} y2={zeroY}
           stroke="rgba(255,255,255,0.18)" strokeWidth={1} />
 
-        {/* Y axis labels */}
-        {[-0.4, -0.2, 0, 0.2, 0.4].map(v => (
+        {/* Y axis labels — dynamic range */}
+        {yAxisVals.map(v => (
           <g key={v}>
             <line x1={ML} x2={W - MR} y1={yOf(v)} y2={yOf(v)}
               stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
             <text x={ML - 4} y={yOf(v) + 3} textAnchor="end"
               fill="rgba(255,255,255,0.25)" fontSize={8} fontFamily="monospace">
-              {v >= 0 ? '+' : ''}{v.toFixed(1)}
+              {v >= 0 ? '+' : ''}{v.toFixed(2)}
             </text>
           </g>
         ))}
@@ -454,12 +467,17 @@ function UpsetAnalysis({ data }) {
   // Combine upset vs non-upset correlations for comparison
   const uMap  = {}; (upset_feature_correlation || []).forEach(f => { uMap[f.feature] = f })
   const nuMap = {}; (non_upset_feature_correlation || []).forEach(f => { nuMap[f.feature] = f })
+  // Use all available features from both lists (up to 20 each from backend)
   const allFeats = [...new Set([
-    ...(upset_feature_correlation || []).slice(0, 12).map(f => f.feature),
-    ...(non_upset_feature_correlation || []).slice(0, 12).map(f => f.feature),
-  ])]
+    ...(upset_feature_correlation || []).map(f => f.feature),
+    ...(non_upset_feature_correlation || []).map(f => f.feature),
+  ])].slice(0, 20)
 
   const maxV = 0.45
+  // Upset bars use orange (not red) for positive so they don't look like negatives
+  const UPSET_POS_COLOR  = '#fb923c'
+  const NORMAL_POS_COLOR = '#3b82f6'
+  const NEG_COLOR        = '#f87171'
 
   return (
     <div className="an-chart-card">
@@ -507,8 +525,9 @@ function UpsetAnalysis({ data }) {
       {/* Feature comparison: upset vs normal games */}
       <div className="an-sub-label" style={{ marginTop: 18 }}>Feature Correlation: Upsets vs Normal Outcomes</div>
       <div className="an-upset-legend">
-        <span><span className="an-era-dot" style={{ background: '#f87171' }} />Upset games</span>
-        <span><span className="an-era-dot" style={{ background: '#3b82f6' }} />Normal games</span>
+        <span><span className="an-era-dot" style={{ background: UPSET_POS_COLOR }} />Upset games (positive)</span>
+        <span><span className="an-era-dot" style={{ background: NORMAL_POS_COLOR }} />Normal games (positive)</span>
+        <span><span className="an-era-dot" style={{ background: NEG_COLOR }} />Negative correlation</span>
       </div>
       <div className="an-era-grid">
         {allFeats.map(feat => {
@@ -518,15 +537,23 @@ function UpsetAnalysis({ data }) {
           return (
             <div key={feat} className="an-era-row">
               <div className="an-era-feat-label" title={label}>{label}</div>
-              {[{ d: u, color: '#f87171' }, { d: nu, color: '#3b82f6' }].map(({ d, color }, i) => {
+              {[
+                { d: u,  posColor: UPSET_POS_COLOR  },
+                { d: nu, posColor: NORMAL_POS_COLOR },
+              ].map(({ d, posColor }, i) => {
                 const v   = d?.correlation
                 const pct = v != null ? (Math.abs(v) / maxV) * 100 : 0
+                const barBg = v == null
+                  ? 'transparent'
+                  : v < 0
+                    ? 'linear-gradient(90deg,#9b1c1c,#f87171)'
+                    : `linear-gradient(90deg,${posColor}44,${posColor})`
+                const textColor = v == null ? 'rgba(255,255,255,0.15)' : v < 0 ? NEG_COLOR : posColor
                 return (
                   <div key={i} className="an-era-bar-wrap" title={v != null ? (v >= 0 ? '+' : '') + v.toFixed(3) : 'n/a'}>
-                    <div className="an-era-bar"
-                      style={{ width: `${pct}%`, background: v != null && v < 0 ? 'linear-gradient(90deg,#9b1c1c,#f87171)' : `linear-gradient(90deg,${color}44,${color})` }} />
-                    <span className="an-era-val mono" style={{ color: v == null ? 'transparent' : v < 0 ? '#f87171' : color }}>
-                      {v != null ? (v >= 0 ? '+' : '') + v.toFixed(3) : ''}
+                    <div className="an-era-bar" style={{ width: `${pct}%`, background: barBg }} />
+                    <span className="an-era-val mono" style={{ color: textColor }}>
+                      {v != null ? (v >= 0 ? '+' : '') + v.toFixed(3) : '—'}
                     </span>
                   </div>
                 )
@@ -545,55 +572,96 @@ function UpsetAnalysis({ data }) {
 
 function RedundancyHeatmap({ data }) {
   if (!data?.features?.length) return <div className="an-no-data">No redundancy data</div>
-  const { features, labels, matrix } = data
-  const N = features.length
+  const { labels, matrix } = data
+  const N = labels.length
 
-  // colour: -1=blue, 0=transparent, +1=gold
-  function cellColor(v) {
-    const a = Math.abs(v)
-    if (a < 0.1) return 'rgba(255,255,255,0.03)'
-    if (v > 0) return `rgba(201,168,76,${Math.min(a, 1) * 0.85})`
-    return `rgba(248,113,113,${Math.min(a, 1) * 0.85})`
+  // Build all unique pairs, sorted by |correlation| descending
+  const pairs = []
+  for (let i = 0; i < N; i++) {
+    for (let j = i + 1; j < N; j++) {
+      const v = matrix[i][j]
+      if (v != null) pairs.push({ a: labels[i], b: labels[j], v, av: Math.abs(v) })
+    }
+  }
+  pairs.sort((a, b) => b.av - a.av)
+
+  const TIERS = [
+    { label: 'Very High  (|r| > 0.7)',   min: 0.70, color: '#f87171' },
+    { label: 'High  (0.5 – 0.7)',         min: 0.50, color: '#fb923c' },
+    { label: 'Moderate  (0.3 – 0.5)',     min: 0.30, color: '#c9a84c' },
+  ]
+  const shown = pairs.filter(p => p.av >= 0.30).slice(0, 40)
+
+  function tierColor(av) {
+    if (av >= 0.70) return '#f87171'
+    if (av >= 0.50) return '#fb923c'
+    return '#c9a84c'
+  }
+
+  function barBg(p) {
+    if (p.av >= 0.70) return p.v > 0 ? 'linear-gradient(90deg,#7f1d1d,#f87171)' : 'linear-gradient(90deg,#1e3a5f,#3b82f6)'
+    if (p.av >= 0.50) return p.v > 0 ? 'linear-gradient(90deg,#78350f,#fb923c)' : 'linear-gradient(90deg,#1e3a5f,#3b82f6)'
+    return p.v > 0
+      ? 'linear-gradient(90deg,rgba(201,168,76,0.25),rgba(201,168,76,0.65))'
+      : 'linear-gradient(90deg,rgba(59,130,246,0.25),rgba(59,130,246,0.65))'
   }
 
   return (
     <div className="an-chart-card">
-      <div className="an-chart-label">Feature Redundancy — Pairwise Correlation Matrix</div>
+      <div className="an-chart-label">Feature Redundancy — Most Correlated Pairs</div>
       <div className="an-chart-sub mono">
-        Gold = positive correlation · Red = inverse · Dark = independent · Highly correlated features carry redundant signal
+        Sorted by absolute correlation · Warm = positively correlated (redundant signal) · Blue = inversely correlated
       </div>
-      <div className="an-heatmap-scroll">
-        <table className="an-heatmap-table">
-          <thead>
-            <tr>
-              <th className="an-hm-corner" />
-              {labels.map((l, i) => (
-                <th key={i} className="an-hm-col-head" title={l}>
-                  <span className="an-hm-rotated">{l}</span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {matrix.map((row, ri) => (
-              <tr key={ri}>
-                <td className="an-hm-row-label" title={labels[ri]}>
-                  {labels[ri]}
-                </td>
-                {row.map((v, ci) => (
-                  <td key={ci}
-                    className="an-hm-cell"
-                    style={{ background: cellColor(v) }}
-                    title={`${labels[ri]} × ${labels[ci]}: ${v >= 0 ? '+' : ''}${v.toFixed(3)}`}
-                  >
-                    {ri === ci ? '' : Math.abs(v) > 0.5 ? v.toFixed(2) : ''}
-                  </td>
-                ))}
-              </tr>
+
+      {/* Tier legend */}
+      <div style={{ display: 'flex', gap: 20, marginBottom: 18, flexWrap: 'wrap' }}>
+        {TIERS.map(t => (
+          <span key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: '0.68rem', color: t.color, letterSpacing: '0.04em' }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2,
+              background: t.color, display: 'inline-block', flexShrink: 0 }} />
+            {t.label}
+          </span>
+        ))}
+      </div>
+
+      {shown.length === 0
+        ? <div className="an-no-data">No pairs with |r| ≥ 0.30</div>
+        : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {/* Header row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 54px', gap: 12,
+              paddingBottom: 6, borderBottom: '1px solid rgba(201,168,76,0.12)',
+              fontSize: '0.62rem', color: 'var(--gold-dim)', letterSpacing: '0.08em' }}>
+              <div>FEATURE A</div>
+              <div>FEATURE B</div>
+              <div />
+              <div style={{ textAlign: 'right' }}>r</div>
+            </div>
+
+            {shown.map((p, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 54px',
+                gap: 12, alignItems: 'center' }}>
+                <div style={{ fontSize: '0.76rem', color: 'var(--cream)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  title={p.a}>{p.a}</div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--cream-dim)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  title={p.b}>{p.b}</div>
+                <div style={{ height: 7, background: 'rgba(255,255,255,0.06)',
+                  borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${p.av * 100}%`,
+                    background: barBg(p), borderRadius: 2 }} />
+                </div>
+                <div className="mono" style={{ fontSize: '0.72rem',
+                  color: tierColor(p.av), textAlign: 'right', fontWeight: 600 }}>
+                  {(p.v >= 0 ? '+' : '')}{p.v.toFixed(3)}
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        )
+      }
     </div>
   )
 }
@@ -656,7 +724,7 @@ export default function AnalyticsViewer() {
       <div className="an-nav">
         {SECTIONS.map(s => (
           <button key={s.key}
-            className={`tab-btn an-nav-btn${active === s.key ? ' active' : ''}`}
+            className={`tab-btn${active === s.key ? ' active' : ''}`}
             onClick={() => setActive(s.key)}
           >{s.label}</button>
         ))}

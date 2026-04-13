@@ -1,3 +1,5 @@
+import TeamAvatar from './TeamAvatar'
+
 function SeedBadge({ seed }) {
   if (!seed) return null
   return <span className="gs-seed mono">{seed}</span>
@@ -37,10 +39,12 @@ export default function GameSlot({ game, label, seedLookup = {}, onClick }) {
 
       <div className="gs-winner">
         <SeedBadge seed={winnerSeed} />
+        <TeamAvatar team={winner} size={18} />
         <span className="gs-team-name">{winner}</span>
       </div>
       <div className="gs-loser">
         <SeedBadge seed={loserSeed} />
+        <TeamAvatar team={loser} size={18} />
         <span className="gs-team-name">{loser}</span>
       </div>
 

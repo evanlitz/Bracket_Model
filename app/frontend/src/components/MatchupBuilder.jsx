@@ -261,7 +261,8 @@ function TeamSelector({ allTeams, year, team, onYearChange, onTeamChange, side, 
   )
 
   const roundColors = {
-    Champion: '#c9a84c', 'Final Four': '#22c55e', 'Elite 8': '#3b82f6',
+    Champion: '#c9a84c', 'Runner Up': 'var(--cream-dim)',
+    'Final Four': '#22c55e', 'Elite 8': '#3b82f6',
     'Sweet 16': '#a78bfa', R32: 'var(--cream-dim)', R64: 'var(--cream-dim)',
   }
 
@@ -291,7 +292,7 @@ function TeamSelector({ allTeams, year, team, onYearChange, onTeamChange, side, 
               {meta?.conf    && <span className="badge">{meta.conf}</span>}
               {meta?.round_label && (
                 <span className="badge" style={{ borderColor: roundColors[meta.round_label] || 'var(--border-color)', color: roundColors[meta.round_label] || 'var(--cream-dim)' }}>
-                  {meta.is_champion ? '★ Champion' : meta.round_label}
+                  {meta.is_champion ? '★ Champion' : meta.round_label === 'Runner Up' ? '★ Runner Up' : meta.round_label}
                 </span>
               )}
             </div>

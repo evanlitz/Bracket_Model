@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import TeamAvatar from './TeamAvatar'
 
 const ROUND_ORDER = ['1', '2', '3', '4', '5', '6']
 const ROUND_LABELS = { '1': 'R64', '2': 'R32', '3': 'S16', '4': 'E8', '5': 'F4', '6': 'NCG' }
@@ -81,6 +82,7 @@ function GameCard({ game }) {
             </div>
 
             <div className="sc-team-info">
+              <TeamAvatar team={team} size={26} />
               <span className="sc-team-name">{team}</span>
               {hasScore && isActualWinner && (
                 <span className="sc-score mono">{isActualWinner ? Math.max(score1, score2) : Math.min(score1, score2)}</span>

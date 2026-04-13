@@ -27,9 +27,9 @@
 }
 
 .sc-header-sub {
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   color: var(--cream-dim);
-  opacity: 0.5;
+  opacity: 0.7;
   letter-spacing: 0.06em;
 }
 
@@ -49,9 +49,9 @@
 }
 
 .sc-overall-label {
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   color: var(--cream-dim);
-  opacity: 0.55;
+  opacity: 0.75;
   letter-spacing: 0.06em;
 }
 
@@ -83,7 +83,7 @@
 }
 
 .sc-acc-pill.active {
-  background: rgba(201,168,76,0.1);
+  background: var(--overlay-active);
   border-color: var(--gold);
 }
 
@@ -93,7 +93,7 @@
 }
 
 .sc-pill-label {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   color: var(--gold-dim);
   letter-spacing: 0.1em;
 }
@@ -108,9 +108,9 @@
 .sc-acc-pill.active .sc-pill-pct { color: var(--gold-bright); }
 
 .sc-pill-frac {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   color: var(--cream-dim);
-  opacity: 0.45;
+  opacity: 0.7;
 }
 
 /* ── Round section ───────────────────────────────────── */
@@ -135,9 +135,9 @@
 }
 
 .sc-round-acc {
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   color: var(--cream-dim);
-  opacity: 0.45;
+  opacity: 0.7;
 }
 
 /* ── Region group ────────────────────────────────────── */
@@ -147,9 +147,9 @@
 }
 
 .sc-region-label {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--cream-dim);
-  opacity: 0.5;
+  opacity: 0.75;
   letter-spacing: 0.12em;
   margin-bottom: 8px;
   padding-left: 2px;
@@ -157,12 +157,12 @@
 
 .sc-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
 }
 
 .sc-cards-grid-late {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
 }
 
 /* ── Game card ───────────────────────────────────────── */
@@ -200,7 +200,7 @@
 }
 
 .sc-card-tag {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   color: var(--cream-dim);
   opacity: 0.4;
   letter-spacing: 0.08em;
@@ -216,9 +216,9 @@
 .sc-card-result.wrong   { color: var(--red-bright); }
 
 .sc-card-upcoming-badge {
-  font-size: 0.52rem;
+  font-size: 0.65rem;
   color: var(--gold-dim);
-  opacity: 0.5;
+  opacity: 0.75;
   letter-spacing: 0.08em;
 }
 
@@ -264,7 +264,7 @@
 }
 
 .sc-team-name {
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -292,7 +292,7 @@
 }
 
 .sc-score {
-  font-size: 0.65rem;
+  font-size: 0.82rem;
   color: var(--cream);
   font-weight: 600;
   position: relative;
@@ -306,7 +306,7 @@
 }
 
 .sc-prob {
-  font-size: 0.62rem;
+  font-size: 0.78rem;
   color: var(--cream-dim);
   opacity: 0.5;
   position: relative;
@@ -326,7 +326,7 @@
 /* ── Card footer ─────────────────────────────────────── */
 
 .sc-card-footer {
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   color: var(--cream-dim);
   opacity: 0.45;
   border-top: 1px solid rgba(255,255,255,0.04);

@@ -3,7 +3,7 @@
    ══════════════════════════════════════════════════════ */
 
 .mb-viewer {
-  padding: 4px 32px 48px;
+  padding: 4px 32px 64px;
 }
 
 .mb-toolbar {
@@ -103,7 +103,7 @@
   cursor: pointer;
 }
 
-.mb-select:focus { outline: none; border-color: var(--gold-dim); }
+.mb-select:focus { outline: none; border-color: var(--gold); box-shadow: var(--focus-ring); }
 .mb-select-team { flex: 1; min-width: 140px; }
 
 .mb-team-card {

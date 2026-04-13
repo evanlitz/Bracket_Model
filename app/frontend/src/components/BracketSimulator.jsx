@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import TeamAvatar from './TeamAvatar'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -49,7 +50,10 @@ function ChampionSpotlight({ teams }) {
       {top.map((t, i) => (
         <div key={t.team} className={`bs-spotlight-card ${i === 0 ? 'bs-spotlight-winner' : ''}`}>
           <div className="bs-spot-rank mono">MODEL RANK #{i + 1}</div>
-          <div className="bs-spot-team display">{t.team}</div>
+          <div className="bs-spot-team-header">
+            <TeamAvatar team={t.team} size={i === 0 ? 44 : 36} />
+            <div className="bs-spot-team display">{t.team}</div>
+          </div>
           <div className="bs-spot-meta mono">
             {t.seed ? `${t.seed}-seed` : ''}{t.seed && t.region ? ' · ' : ''}{t.region || ''}
           </div>
@@ -95,6 +99,7 @@ function HeatTable({ teams, sortKey, sortDir, onSort }) {
           {teams.map(t => (
             <tr key={t.team} className="bs-row">
               <td className="bs-td-team">
+                <TeamAvatar team={t.team} size={22} />
                 <span className="bs-team-name">{t.team}</span>
                 {t.region && <span className="bs-team-region mono">{t.region}</span>}
               </td>
@@ -147,9 +152,11 @@ function DetBracket({ games }) {
             {byRound[rnd].map(g => (
               <div key={g.match_id} className={`bs-det-game ${g.round >= 5 ? 'bs-det-final' : ''}`}>
                 <div className={`bs-det-team ${g.winner === g.t1 ? 'bs-det-winner' : 'bs-det-loser'}`}>
+                  <TeamAvatar team={g.t1} size={18} />
                   {g.t1}
                 </div>
                 <div className={`bs-det-team ${g.winner === g.t2 ? 'bs-det-winner' : 'bs-det-loser'}`}>
+                  <TeamAvatar team={g.t2} size={18} />
                   {g.t2}
                 </div>
                 <div className="bs-det-prob mono">

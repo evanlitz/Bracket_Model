@@ -6,6 +6,7 @@ export function resultBadgeClass(roundLabel, isChampion) {
     'Sweet 16': 's16',
     'Elite 8': 'e8',
     'Final Four': 'f4',
+    'Runner Up': 'runner-up',
     'Champion': 'champ',
   }
   return map[roundLabel] || 'r64'
@@ -13,6 +14,7 @@ export function resultBadgeClass(roundLabel, isChampion) {
 
 export function resultLabel(roundLabel, isChampion) {
   if (isChampion) return '★ CHAMPION'
+  if (roundLabel === 'Runner Up') return '★ RUNNER UP'
   return roundLabel || ''
 }
 

@@ -37,6 +37,13 @@
   --glow-gold:     0 0 12px rgba(201,168,76,0.45), 0 0 30px rgba(201,168,76,0.15);
   --glow-blue:     0 0 12px rgba(59,130,246,0.35);
   --glow-card:     inset 0 1px 0 rgba(201,168,76,0.15), 0 4px 24px rgba(0,0,0,0.6);
+
+  /* Overlay tokens — replaces scattered rgba() magic values */
+  --overlay-hover:    rgba(201,168,76,0.06);
+  --overlay-active:   rgba(201,168,76,0.12);
+  --overlay-subtle:   rgba(255,255,255,0.04);
+  --border-separator: rgba(255,255,255,0.06);
+  --focus-ring:       0 0 0 2px rgba(201,168,76,0.5);
 }
 
 /* ── Reset & base ─────────────────────────────────────────── */
@@ -46,6 +53,17 @@
   margin: 0;
   padding: 0;
 }
+
+/* Global focus ring — keyboard nav visibility */
+*:focus { outline: none; }
+*:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+
+/* Global scrollbar styling */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-card); }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+* { scrollbar-width: thin; scrollbar-color: var(--gold-dim) var(--bg-card); }
 
 html, body, #root {
   height: 100%;
@@ -300,6 +318,13 @@ body::before {
   border-bottom-left-radius: 6px;
 }
 
+.query-card-team-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
 .team-name-large {
   font-family: var(--font-display);
   font-size: 2rem;
@@ -308,7 +333,6 @@ body::before {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   line-height: 1.1;
-  margin-bottom: 6px;
 }
 
 .team-meta {
@@ -745,6 +769,11 @@ body::before {
   box-shadow: var(--glow-gold);
   font-weight: 700;
 }
+.badge.runner-up {
+  border-color: var(--cream-dim);
+  color: var(--cream-dim);
+  font-weight: 600;
+}
 
 /* ── Scroll hint arrows ───────────────────────────────────── */
 
@@ -977,11 +1006,17 @@ body::before {
 
 .tab-bar {
   display: flex;
+  flex-wrap: nowrap;
   gap: 2px;
   padding: 0 24px;
   border-bottom: 2px solid var(--gold-dim);
   background: var(--bg-secondary);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* hide scrollbar on tab bar — it's not needed visually */
+  scrollbar-width: none;
 }
+.tab-bar::-webkit-scrollbar { display: none; }
 
 .tab-btn {
   padding: 10px 24px;
@@ -1011,6 +1046,14 @@ body::before {
   background: var(--bg-card);
   border-color: var(--gold);
   border-bottom: 2px solid var(--bg-card);
+  text-shadow: 0 0 8px rgba(240,192,64,0.35);
+}
+
+/* Analytics sub-nav — smaller pills inside the viewer */
+.an-nav .tab-btn {
+  font-size: 0.74rem;
+  padding: 5px 13px;
+  letter-spacing: 0.06em;
 }
 
 
@@ -1394,7 +1437,7 @@ body::before {
 
 .gs-winner, .gs-loser {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 4px;
   white-space: nowrap;
   overflow: hidden;
@@ -1545,7 +1588,7 @@ body::before {
 
 .fi-acc-round {
   font-family: var(--font-display);
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   color: var(--gold);
   letter-spacing: 0.1em;
 }
@@ -1562,7 +1605,7 @@ body::before {
 }
 
 .fi-acc-n {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--cream-dim);
   opacity: 0.55;
 }
@@ -1721,7 +1764,7 @@ body::before {
 
 .fi-chart-title {
   font-family: var(--font-display);
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   letter-spacing: 0.12em;
   color: var(--gold);
   text-transform: uppercase;
@@ -1743,8 +1786,8 @@ body::before {
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
-  font-size: 0.77rem;
-  min-height: 18px;
+  font-size: 0.86rem;
+  min-height: 20px;
 }
 
 .fi-feat-label {
@@ -1755,7 +1798,7 @@ body::before {
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: var(--font-body);
-  font-size: 0.77rem;
+  font-size: 0.86rem;
 }
 
 .fi-feat-label.top {
@@ -1776,6 +1819,7 @@ body::before {
   border-radius: 2px;
   min-width: 2px;
   flex-shrink: 0;
+  max-width: calc(100% - 74px);
   transition: width 0.3s ease;
 }
 
@@ -1785,7 +1829,7 @@ body::before {
 
 .fi-val {
   font-family: var(--font-mono);
-  font-size: 0.69rem;
+  font-size: 0.78rem;
   color: var(--cream-dim);
   white-space: nowrap;
   min-width: 54px;
@@ -1832,14 +1876,14 @@ body::before {
 .fi-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: 0.86rem;
 }
 
 .fi-table th {
   background: var(--bg-card-inner);
   color: var(--gold);
   font-family: var(--font-display);
-  font-size: 0.68rem;
+  font-size: 0.76rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 8px 10px;
@@ -2294,7 +2338,7 @@ body::before {
    ══════════════════════════════════════════════════════ */
 
 .an-viewer {
-  padding: 4px 32px 48px;
+  padding: 4px 32px 64px;
 }
 
 .an-header {
@@ -2310,9 +2354,9 @@ body::before {
 }
 
 .an-header-meta {
-  font-size: 0.68rem;
+  font-size: 0.76rem;
   color: var(--cream-dim);
-  opacity: 0.55;
+  opacity: 0.75;
   margin-top: 3px;
 }
 
@@ -2324,10 +2368,7 @@ body::before {
   padding: 6px 0 10px;
 }
 
-.an-nav-btn {
-  font-size: 0.74rem !important;
-  padding: 5px 13px !important;
-}
+/* .an-nav .tab-btn overrides are now in the TAB NAVIGATION section above */
 
 /* Section */
 .an-section {
@@ -2343,9 +2384,9 @@ body::before {
 }
 
 .an-section-sub {
-  font-size: 0.68rem;
+  font-size: 0.76rem;
   color: var(--cream-dim);
-  opacity: 0.6;
+  opacity: 0.8;
   margin-bottom: 10px;
 }
 
@@ -2371,7 +2412,7 @@ body::before {
 }
 
 .an-chart-sub {
-  font-size: 0.65rem;
+  font-size: 0.74rem;
   color: var(--cream-dim);
   opacity: 0.6;
   margin-bottom: 10px;
@@ -2406,7 +2447,7 @@ body::before {
   border: 1px solid rgba(201,168,76,0.25);
   color: var(--cream-dim);
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   padding: 3px 9px;
   border-radius: 2px;
   cursor: pointer;
@@ -2440,13 +2481,13 @@ body::before {
 .an-year-cell:hover { background: rgba(255,255,255,0.04); }
 
 .an-year-cell-yr {
-  font-size: 0.58rem;
+  font-size: 0.65rem;
   color: var(--cream-dim);
   opacity: 0.45;
 }
 
 .an-year-cell-val {
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   margin-top: 1px;
 }
 
@@ -2502,7 +2543,7 @@ body::before {
   background: transparent;
   border: 1px solid rgba(255,255,255,0.12);
   color: var(--cream-dim);
-  font-size: 0.68rem;
+  font-size: 0.76rem;
   padding: 4px 9px;
   border-radius: 2px;
   cursor: pointer;
@@ -2573,7 +2614,7 @@ body::before {
 }
 
 .an-era-feat-label {
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   color: var(--cream-dim);
   white-space: nowrap;
   overflow: hidden;
@@ -2595,7 +2636,7 @@ body::before {
 }
 
 .an-era-val {
-  font-size: 0.64rem;
+  font-size: 0.72rem;
   white-space: nowrap;
   min-width: 48px;
 }

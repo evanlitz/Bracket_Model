@@ -27,9 +27,9 @@
 }
 
 .uf-header-sub {
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   color: var(--cream-dim);
-  opacity: 0.5;
+  opacity: 0.75;
   letter-spacing: 0.06em;
 }
 
@@ -58,9 +58,9 @@
 }
 
 .uf-stat-label {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   color: var(--cream-dim);
-  opacity: 0.5;
+  opacity: 0.75;
   letter-spacing: 0.06em;
   margin-top: 3px;
 }
@@ -114,10 +114,10 @@
 }
 
 .uf-filter-label {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   color: var(--cream-dim);
-  opacity: 0.45;
-  letter-spacing: 0.12em;
+  opacity: 0.65;
+  letter-spacing: 0.1em;
 }
 
 .uf-filter-btns {
@@ -140,7 +140,7 @@
 
 .uf-filter-btn:hover { border-color: var(--gold-dim); color: var(--cream); }
 .uf-filter-btn.active {
-  background: rgba(201,168,76,0.1);
+  background: var(--overlay-active);
   border-color: var(--gold);
   color: var(--gold-bright);
 }
@@ -149,12 +149,12 @@
 
 .uf-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 10px;
 }
 
 .uf-cin-grid {
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
 }
 
 /* ── Base card ───────────────────────────────────────── */
@@ -183,8 +183,15 @@
   gap: 6px;
 }
 
+.uf-card-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .uf-card-tag {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   color: var(--cream-dim);
   opacity: 0.4;
   letter-spacing: 0.08em;
@@ -193,7 +200,7 @@
 /* ── Tier badges ─────────────────────────────────────── */
 
 .uf-tier {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   padding: 2px 6px;
   border-radius: 2px;
   letter-spacing: 0.08em;
@@ -220,9 +227,9 @@
 }
 
 .uf-seed {
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   color: var(--cream-dim);
-  opacity: 0.55;
+  opacity: 0.75;
   min-width: 16px;
 }
 
@@ -232,7 +239,7 @@
 }
 
 .uf-name {
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   color: var(--cream-dim);
   flex: 1;
   white-space: nowrap;
@@ -249,6 +256,24 @@
   font-size: 0.65rem;
   color: var(--cream);
   font-weight: 600;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.uf-score-win  { color: var(--cream); font-weight: 700; }
+.uf-score-lose { color: var(--cream-dim); opacity: 0.35; font-weight: 400; }
+
+/* ── Model-backed badge ──────────────────────────────── */
+
+.uf-model-called {
+  font-size: 0.5rem;
+  padding: 2px 5px;
+  border-radius: 2px;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+  background: rgba(74,222,128,0.08);
+  color: #4ade80;
+  border: 1px solid rgba(74,222,128,0.25);
 }
 
 /* ── Probability bar ─────────────────────────────────── */
@@ -274,7 +299,7 @@
 }
 
 .uf-prob-label {
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   color: var(--gold-bright);
   font-weight: 700;
 }
@@ -286,43 +311,78 @@
   padding-top: 6px;
 }
 
-.uf-status { font-size: 0.62rem; letter-spacing: 0.04em; }
-.uf-status-upcoming { color: var(--gold-dim); opacity: 0.75; }
+.uf-status { font-size: 0.72rem; letter-spacing: 0.04em; }
+.uf-status-upcoming { color: var(--gold-dim); opacity: 0.9; }
 .uf-status-upset    { color: #4ade80; }
-.uf-status-held     { color: var(--cream-dim); opacity: 0.45; }
+.uf-status-held     { color: var(--cream-dim); opacity: 0.8; }
 
 /* ── Cinderella card ─────────────────────────────────── */
 
-.uf-cin-card { gap: 8px; }
+.uf-cin-card { gap: 0; padding: 12px 13px 11px; }
 
 .uf-cin-positive { border-color: rgba(201,168,76,0.25); }
 .uf-cin-neutral  { opacity: 0.65; }
 
-.uf-cin-badge {
-  font-size: 0.52rem;
-  color: var(--gold-bright);
-  background: rgba(201,168,76,0.12);
-  border: 1px solid rgba(201,168,76,0.3);
-  padding: 2px 6px;
-  border-radius: 2px;
-  letter-spacing: 0.08em;
+/* Logo + name header */
+.uf-cin-team-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.uf-cin-team-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .uf-cin-name {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--cream);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
+  margin-bottom: 3px;
+}
+
+.uf-cin-team-meta {
+  font-size: 0.55rem;
+  color: var(--cream-dim);
+  opacity: 0.5;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.uf-cin-badge {
+  font-size: 0.5rem;
+  color: var(--gold-bright);
+  background: rgba(201,168,76,0.12);
+  border: 1px solid rgba(201,168,76,0.3);
+  padding: 1px 5px;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+}
+
+/* Milestone section (S16 / E8 / F4) */
+.uf-cin-milestone {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 9px 0 4px;
 }
 
 .uf-cin-stat { display: flex; flex-direction: column; gap: 5px; }
 
 .uf-cin-stat-label {
-  font-size: 0.58rem;
+  font-size: 0.6rem;
   color: var(--gold-dim);
-  opacity: 0.7;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 .uf-cin-bars { display: flex; flex-direction: column; gap: 4px; }

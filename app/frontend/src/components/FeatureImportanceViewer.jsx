@@ -220,8 +220,9 @@ function FeatureTable({ roundData, featLabels }) {
 
 // ── Trajectory bump chart ─────────────────────────────────────────────────────
 
+const RANK_LIMIT = 12
+
 function TrajectoryChart({ data }) {
-  // Build rank maps per round
   const rankMaps = {}
   TRAJ_ROUNDS.forEach(rk => {
     rankMaps[rk] = {}
@@ -230,46 +231,55 @@ function TrajectoryChart({ data }) {
     })
   })
 
-  // Top 8 features by overall permutation importance
   const top8 = (data.rounds['overall']?.permutation || []).slice(0, 8)
   if (top8.length === 0) return <div className="fi-no-data">No overall data</div>
 
-  // SVG layout
-  const W = 960, H = 340
-  const ML = 186, MR = 50, MT = 38, MB = 20
+  // Wider chart to fit full feature labels without truncation
+  const W = 1060, H = 420
+  const ML = 240, MR = 40, MT = 48, MB = 44
   const cW = W - ML - MR
   const cH = H - MT - MB
-  const cols = TRAJ_ROUNDS.length  // 5
+  const cols = TRAJ_ROUNDS.length
 
-  // Determine Y range: show ranks 1–N where N = max rank any top8 feature hits
-  const allRanks = top8.flatMap(f =>
-    TRAJ_ROUNDS.map(rk => rankMaps[rk][f.feature]).filter(Boolean)
-  )
-  const maxRank = Math.min(Math.max(...allRanks, 8), 15)
+  const xOf = i    => ML + (i / (cols - 1)) * cW
+  const yOf = rank => MT + ((rank - 1) / (RANK_LIMIT - 1)) * cH
 
-  const xOf  = i    => ML + (i / (cols - 1)) * cW
-  const yOf  = rank => MT + ((rank - 1) / (maxRank - 1)) * cH
+  // S-curve bezier path between two points (classic bump-chart look)
+  const bezier = (p1, p2) => {
+    const mx = (p1.x + p2.x) / 2
+    return `M${p1.x},${p1.y} C${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`
+  }
+  // Bezier from a point to a fixed-y destination (for off-chart transitions)
+  const bezierToY = (p1, x2, y2) => {
+    const mx = (p1.x + x2) / 2
+    return `M${p1.x},${p1.y} C${mx},${p1.y} ${mx},${y2} ${x2},${y2}`
+  }
 
-  // Nudge labels so they don't overlap at the left edge (positioned by R64 rank)
+  // Nudge left-side labels so they don't stack
   function nudgeLabels(items) {
     const MIN_GAP = 15
     const placed = items
       .map((f, fi) => {
         const rank = rankMaps[TRAJ_ROUNDS[0]][f.feature]
-        return { fi, rank, y: rank ? yOf(rank) : null }
+        const inRange = rank && rank <= RANK_LIMIT
+        return { fi, y: inRange ? yOf(rank) : null }
       })
       .filter(d => d.y !== null)
       .sort((a, b) => a.y - b.y)
 
     for (let i = 1; i < placed.length; i++) {
-      if (placed[i].y - placed[i - 1].y < MIN_GAP) {
+      if (placed[i].y - placed[i - 1].y < MIN_GAP)
         placed[i].y = placed[i - 1].y + MIN_GAP
-      }
+    }
+    for (let i = placed.length - 1; i >= 0; i--) {
+      if (placed[i].y > MT + cH) placed[i].y = MT + cH
+      if (i > 0 && placed[i].y - placed[i - 1].y < MIN_GAP)
+        placed[i - 1].y = placed[i].y - MIN_GAP
     }
 
-    const result = {}
-    placed.forEach(d => { result[d.fi] = d.y })
-    return result
+    const out = {}
+    placed.forEach(d => { out[d.fi] = d.y })
+    return out
   }
 
   const labelY = nudgeLabels(top8)
@@ -285,109 +295,173 @@ function TrajectoryChart({ data }) {
         ))}
       </div>
 
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        width="100%"
-        style={{ display: 'block', overflow: 'visible' }}
-        aria-label="Feature importance rank trajectory across tournament rounds"
-      >
-        {/* Vertical grid lines */}
-        {TRAJ_ROUNDS.map((rk, i) => (
-          <line key={rk}
-            x1={xOf(i)} x2={xOf(i)} y1={MT} y2={MT + cH}
-            stroke="rgba(255,255,255,0.06)" strokeWidth={1}
-          />
-        ))}
+      <div style={{ overflow: 'hidden', maxWidth: `${W}px` }}>
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          width="100%"
+          style={{ display: 'block' }}
+          aria-label="Feature importance rank trajectory across tournament rounds"
+        >
+          <defs>
+            <clipPath id="traj-clip">
+              <rect x={0} y={0} width={W} height={H} />
+            </clipPath>
+          </defs>
+          <g clipPath="url(#traj-clip)">
 
-        {/* Horizontal rank guide lines */}
-        {[1, 3, 5, 8, 10].filter(r => r <= maxRank).map(r => (
-          <g key={r}>
-            <line
-              x1={ML} x2={ML + cW} y1={yOf(r)} y2={yOf(r)}
-              stroke="rgba(255,255,255,0.04)" strokeWidth={1} strokeDasharray="3 4"
+            {/* Top-3 gold highlight band */}
+            <rect
+              x={ML} y={yOf(1) - 10}
+              width={cW} height={yOf(3) - yOf(1) + 20}
+              fill="rgba(201,168,76,0.07)" rx={3}
             />
-            <text x={ML - 6} y={yOf(r) + 4} textAnchor="end"
-              fill="rgba(255,255,255,0.2)" fontSize={9} fontFamily="monospace">
-              #{r}
+            <text x={ML + cW + 6} y={yOf(1) + 4}
+              fill="rgba(201,168,76,0.35)" fontSize={8} fontFamily="monospace">
+              TOP 3
             </text>
-          </g>
-        ))}
 
-        {/* Round column headers */}
-        {TRAJ_ROUNDS.map((rk, i) => (
-          <text key={rk} x={xOf(i)} y={MT - 14} textAnchor="middle"
-            fill="#c9a84c" fontSize={11} fontFamily="monospace" letterSpacing={1.5}
-            fontWeight="bold">
-            {ROUND_LABELS[rk]}
-          </text>
-        ))}
+            {/* Vertical column lines */}
+            {TRAJ_ROUNDS.map((rk, i) => (
+              <line key={rk}
+                x1={xOf(i)} x2={xOf(i)} y1={MT} y2={MT + cH}
+                stroke="rgba(255,255,255,0.07)" strokeWidth={1}
+              />
+            ))}
 
-        {/* Feature lines + dots */}
-        {top8.map((f, fi) => {
-          const color  = FEATURE_COLORS[fi]
-          const points = TRAJ_ROUNDS.map((rk, i) => {
-            const rank = rankMaps[rk][f.feature]
-            return rank ? { x: xOf(i), y: yOf(rank), rank } : null
-          })
+            {/* Horizontal rank guides */}
+            {[1, 3, 6, 9, 12].map(r => (
+              <g key={r}>
+                <line
+                  x1={ML} x2={ML + cW} y1={yOf(r)} y2={yOf(r)}
+                  stroke={r === 1 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)'}
+                  strokeWidth={1} strokeDasharray="3 5"
+                />
+                <text x={ML - 8} y={yOf(r) + 4} textAnchor="end"
+                  fill="rgba(255,255,255,0.3)" fontSize={9} fontFamily="monospace">
+                  #{r}
+                </text>
+              </g>
+            ))}
 
-          // Build continuous path segments (skip nulls)
-          const segments = []
-          let current = []
-          points.forEach(p => {
-            if (p) { current.push(p) }
-            else if (current.length) { segments.push(current); current = [] }
-          })
-          if (current.length) segments.push(current)
+            {/* Round column headers */}
+            {TRAJ_ROUNDS.map((rk, i) => (
+              <text key={rk} x={xOf(i)} y={MT - 22} textAnchor="middle"
+                fill="#c9a84c" fontSize={12} fontFamily="monospace" letterSpacing={1.5}
+                fontWeight="bold">
+                {ROUND_LABELS[rk]}
+              </text>
+            ))}
 
-          return (
-            <g key={f.feature}>
-              {segments.map((seg, si) => {
-                const d = seg.map((p, pi) => `${pi === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
-                return (
-                  <path key={si} d={d} fill="none"
-                    stroke={color} strokeWidth={2.5} strokeLinejoin="round" opacity={0.85}
-                  />
-                )
-              })}
+            {/* Feature curves + dots */}
+            {top8.map((f, fi) => {
+              const color = FEATURE_COLORS[fi]
+              const pts = TRAJ_ROUNDS.map((rk, i) => {
+                const rank = rankMaps[rk][f.feature]
+                if (!rank) return null
+                const inRange = rank <= RANK_LIMIT
+                return { x: xOf(i), y: inRange ? yOf(rank) : null, rank, inRange }
+              })
 
-              {/* Dots + rank labels */}
-              {points.map((p, i) => p && (
-                <g key={i}>
-                  <circle cx={p.x} cy={p.y} r={5}
-                    fill={color} stroke="var(--bg)" strokeWidth={2} />
-                  <text x={p.x} y={p.y - 9} textAnchor="middle"
-                    fill={color} fontSize={9} fontFamily="monospace" opacity={0.75}>
-                    #{p.rank}
-                  </text>
-                </g>
-              ))}
-
-              {/* Left label at R64 position */}
-              {labelY[fi] != null && (
-                <>
-                  {/* connector dot → label */}
-                  {rankMaps[TRAJ_ROUNDS[0]][f.feature] && (
-                    <line
-                      x1={ML - 4} x2={ML - 12}
-                      y1={yOf(rankMaps[TRAJ_ROUNDS[0]][f.feature])}
-                      y2={labelY[fi]}
-                      stroke={color} strokeWidth={1} opacity={0.4}
+              // Smooth bezier segments
+              const paths = []
+              for (let i = 0; i < pts.length - 1; i++) {
+                const p1 = pts[i], p2 = pts[i + 1]
+                if (!p1 || !p2) continue
+                if (p1.inRange && p2.inRange) {
+                  paths.push(
+                    <path key={`l${i}`} d={bezier(p1, p2)} fill="none"
+                      stroke={color} strokeWidth={2.5} opacity={0.88}
+                      strokeLinecap="round"
                     />
+                  )
+                } else if (p1.inRange && !p2.inRange) {
+                  paths.push(
+                    <path key={`l${i}`} d={bezierToY(p1, p2.x, MT + cH)} fill="none"
+                      stroke={color} strokeWidth={1.5} opacity={0.3}
+                      strokeDasharray="5 3" strokeLinecap="round"
+                    />
+                  )
+                } else if (!p1.inRange && p2.inRange) {
+                  paths.push(
+                    <path key={`l${i}`} d={bezierToY(p2, p1.x, MT + cH)} fill="none"
+                      stroke={color} strokeWidth={1.5} opacity={0.3}
+                      strokeDasharray="5 3" strokeLinecap="round"
+                    />
+                  )
+                }
+              }
+
+              // Dots + rank labels (in-range), pill badges (off-chart)
+              const markers = pts.map((p, i) => {
+                if (!p) return null
+                if (p.inRange) {
+                  return (
+                    <g key={`d${i}`}>
+                      <circle cx={p.x} cy={p.y} r={6}
+                        fill={color} stroke="var(--bg)" strokeWidth={2.5} />
+                      <text x={p.x} y={p.y - 11} textAnchor="middle"
+                        fill={color} fontSize={9} fontFamily="monospace" fontWeight="600"
+                        opacity={0.85}>
+                        #{p.rank}
+                      </text>
+                    </g>
+                  )
+                }
+                // Off-chart: pill badge with rank
+                const by = MT + cH + 6
+                return (
+                  <g key={`d${i}`}>
+                    {/* pill background */}
+                    <rect x={p.x - 17} y={by} width={34} height={15} rx={7}
+                      fill={color} opacity={0.18}
+                    />
+                    <rect x={p.x - 17} y={by} width={34} height={15} rx={7}
+                      fill="none" stroke={color} strokeWidth={1} opacity={0.4}
+                    />
+                    <text x={p.x} y={by + 11} textAnchor="middle"
+                      fill={color} fontSize={9} fontFamily="monospace" fontWeight="600"
+                      opacity={0.85}>
+                      ▼{p.rank}
+                    </text>
+                  </g>
+                )
+              })
+
+              // Left label — full name, no truncation at this margin width
+              const r64rank = rankMaps[TRAJ_ROUNDS[0]][f.feature]
+              const r64InRange = r64rank && r64rank <= RANK_LIMIT
+
+              return (
+                <g key={f.feature}>
+                  {paths}
+                  {markers}
+                  {labelY[fi] != null && (
+                    <>
+                      {r64InRange && (
+                        <line
+                          x1={ML - 5} x2={ML - 14}
+                          y1={yOf(r64rank)} y2={labelY[fi]}
+                          stroke={color} strokeWidth={1} opacity={0.35}
+                        />
+                      )}
+                      <text x={ML - 16} y={labelY[fi] + 4} textAnchor="end"
+                        fill={color} fontSize={11} fontFamily="sans-serif" fontWeight="500">
+                        {f.label}
+                      </text>
+                    </>
                   )}
-                  <text x={ML - 14} y={labelY[fi] + 4} textAnchor="end"
-                    fill={color} fontSize={11} fontFamily="sans-serif">
-                    {f.label.length > 22 ? f.label.slice(0, 21) + '…' : f.label}
-                  </text>
-                </>
-              )}
-            </g>
-          )
-        })}
-      </svg>
+                </g>
+              )
+            })}
+
+          </g>
+        </svg>
+      </div>
 
       <div className="fi-trajectory-note mono">
-        Rank = permutation importance position within that round · 1 = most predictive ·
-        Top 8 features by overall importance shown · F4 has small sample, ranks less stable
+        Rank = permutation importance position in that round · 1 = most predictive ·
+        Top 8 features by overall importance · ▼N = ranked outside top {RANK_LIMIT} ·
+        F4 has small sample
       </div>
     </div>
   )
