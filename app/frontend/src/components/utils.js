@@ -1,4 +1,4 @@
-export function resultBadgeClass(roundLabel, isChampion) {
+app/frontend/src/styles/bracket-simulator.cssexport function resultBadgeClass(roundLabel, isChampion) {
   if (isChampion) return 'champ'
   const map = {
     'R64': 'r64', 'Round of 64': 'r64',
