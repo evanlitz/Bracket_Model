@@ -119,9 +119,10 @@ def _load_team_stats(year: int, conf_lkp, bracket_lkp, cutoffs: dict) -> pd.Data
     return kp
 
 
-def _round_label(max_round: int) -> str:
-    return {1: 'R64', 2: 'R32', 3: 'Sweet 16', 4: 'Elite 8',
-            5: 'Final Four', 6: 'Champion'}.get(max_round, f'R{max_round}')
+def _round_label(max_round: int, is_champion: bool = False) -> str:
+    base = {1: 'R64', 2: 'R32', 3: 'Sweet 16', 4: 'Elite 8',
+            5: 'Final Four', 6: 'Runner Up'}.get(max_round, f'R{max_round}')
+    return 'Champion' if is_champion else base
 
 
 # ── DataCache ──────────────────────────────────────────────────────────────────
@@ -275,8 +276,8 @@ class DataCache:
                 'conf':        conf_yearly_lkp.get((team, year), ''),
                 'region':      region_lkp.get((team, year), ''),
                 'max_round':   int(row['max_round']),
-                'round_label': _round_label(int(row['max_round'])),
                 'is_champion': bool(row['is_champion']),
+                'round_label': _round_label(int(row['max_round']), bool(row['is_champion'])),
             })
 
         self.raw_df = full_df.reset_index(drop=True)
@@ -413,7 +414,7 @@ class DataCache:
                     'starter':    bool(r.get('starter', False)),
                     'height':     str(r.get('height', '')),
                     # ESPN box score order
-                    'games':      int(games) if games is not None else None,
+                    'games':      int(games) if pd.notna(games) else None,
                     'ppg':        ppg,
                     'fg_pct':     fg_pct,
                     'fg3_pct':    _sf(r.get('fg3_pct'), 3),
@@ -440,7 +441,8 @@ class DataCache:
     def all_tournament_teams(self) -> list[dict]:
         """Return sorted list of all {team, year, seed, conf} for the selector.
 
-        Includes historical tournament teams + 2026 top-200 by AdjEM rank.
+        Historical years come from teams_meta (outcomes-joined).
+        2026 comes from bracket.csv directly now that the tournament is complete.
         """
         seen = set()
         result = []
@@ -450,25 +452,51 @@ class DataCache:
                 seen.add(key)
                 result.append(meta)
 
-        # Add 2026 teams (pre-tournament — no seed/bracket data yet)
-        if 2026 in self._query_raw_cache:
-            df26 = self._query_raw_cache[2026]
-            for team, row in df26.iterrows():
-                if (team, 2026) in seen:
+        # 2026 — load actual tournament teams from bracket.csv
+        bracket_2026 = DATA_DIR / '2026' / 'bracket.csv'
+        if bracket_2026.exists():
+            br = pd.read_csv(bracket_2026)
+            br['Team1'] = br['Team1'].map(lambda x: normalize_name(x) if isinstance(x, str) else x)
+            br['Team2'] = br['Team2'].map(lambda x: normalize_name(x) if isinstance(x, str) else x)
+            br['Winner'] = br['Winner'].map(lambda x: normalize_name(x) if isinstance(x, str) else x)
+
+            # Max round each team reached (highest round they appear in)
+            max_round_map: dict[str, int] = {}
+            for _, row in br.iterrows():
+                rnd = int(row['Round'])
+                for col in ('Team1', 'Team2'):
+                    t = row[col]
+                    if isinstance(t, str):
+                        max_round_map[t] = max(max_round_map.get(t, 0), rnd)
+
+            # Region from Round-1 rows
+            region_map: dict[str, str] = {}
+            for _, row in br[br['Round'] == 1].iterrows():
+                for col in ('Team1', 'Team2'):
+                    t = row[col]
+                    if isinstance(t, str):
+                        region_map[t] = row.get('Region', '')
+
+            # Champion
+            champ_row = br[br['Round'] == 6]
+            champion = champ_row.iloc[0]['Winner'] if not champ_row.empty else None
+
+            for team in sorted(max_round_map):
+                key = (team, 2026)
+                if key in seen:
                     continue
-                rank = row.get('RankAdjEM')
-                if pd.isna(rank) or int(rank) > 200:
-                    continue
-                seen.add((team, 2026))
+                seen.add(key)
+                max_rnd = max_round_map[team]
+                seed_val = self.seed_lkp.get((team, 2026))
                 result.append({
                     'team':        team,
                     'year':        2026,
-                    'seed':        None,
-                    'conf':        self._conf_yearly_lkp.get((team, 2025), ''),
-                    'region':      '',
-                    'max_round':   None,
-                    'round_label': None,
-                    'is_champion': False,
+                    'seed':        int(seed_val) if seed_val is not None else None,
+                    'conf':        self._conf_yearly_lkp.get((team, 2026), ''),
+                    'region':      region_map.get(team, ''),
+                    'max_round':   max_rnd,
+                    'is_champion': team == champion,
+                    'round_label': _round_label(max_rnd, team == champion),
                 })
 
         return sorted(result, key=lambda x: (x['year'], x['seed'] or 999, x['team']))

@@ -44,8 +44,14 @@ _model = None   # lazy-loaded trained model
 _pmat_cache: dict = {}  # year → (teams_list, tidx, pmat) — invalidated on model reload
 
 
+_INFERENCE_YEAR = 2026  # never train on the current prediction year
+
 def _get_model():
-    """Load or train the full-dataset model, cached in memory."""
+    """Load or train the full-dataset model, cached in memory.
+
+    Excludes _INFERENCE_YEAR from training so the model never sees
+    tournament outcomes it is being asked to predict.
+    """
     global _model
     if _model is not None:
         return _model
@@ -58,6 +64,7 @@ def _get_model():
         from src.features import build_matchup_df
         from src.model import train, save
         df = build_matchup_df()
+        df = df[df['year'] != _INFERENCE_YEAR]
         _model = train(df)
         save(_model, _MODEL_PATH)
         print('Model trained and saved.')
@@ -168,6 +175,23 @@ def matchup(year1: int, team1: str, year2: int, team2: str):
     t1 = normalize_name(team1)
     t2 = normalize_name(team2)
 
+    # Identical team-seasons are always 50/50 by definition
+    if t1 == t2 and year1 == year2:
+        def _meta(team, year):
+            row = next((m for m in cache.teams_meta if m['year'] == year and
+                        normalize_name(m['team']) == team), None)
+            return {'seed': row['seed'] if row else None,
+                    'conference': row.get('conference') if row else None}
+        meta = _meta(t1, year1)
+        return {
+            'team1': t1, 'year1': year1,
+            'team2': t2, 'year2': year2,
+            'prob1': 0.5, 'prob2': 0.5,
+            'features': [],
+            'team1_meta': meta,
+            'team2_meta': meta,
+        }
+
     # Raw stats for both teams
     stats1 = cache.get_raw_stats(year1, t1)
     stats2 = cache.get_raw_stats(year2, t2)
@@ -248,7 +272,13 @@ def matchup(year1: int, team1: str, year2: int, team2: str):
     row_vals = [diff_row.get(c, float('nan')) for c in train_cols]
     X = pd.DataFrame([row_vals], columns=train_cols)
     try:
-        prob1 = float(model.predict_proba(X)[:, 1][0])
+        # Symmetrize: average forward and reversed prediction to cancel
+        # any positional bias in the model (e.g. team1 = higher seed in training)
+        prob_fwd = float(model.predict_proba(X)[:, 1][0])
+        row_vals_rev = [-diff_row.get(c, float('nan')) for c in train_cols]
+        X_rev = pd.DataFrame([row_vals_rev], columns=train_cols)
+        prob_rev = float(model.predict_proba(X_rev)[:, 1][0])
+        prob1 = (prob_fwd + (1.0 - prob_rev)) / 2.0
     except Exception:
         prob1 = 0.5
 
@@ -571,7 +601,13 @@ def scorecard(year: int):
 
 @app.get('/api/upsets')
 def get_upsets():
-    """All upset-eligible games (all years) + historical seed advancement baselines."""
+    """All upset-eligible games (all years) + historical seed advancement baselines.
+
+    Uses the actual trained model on real bracket teams for model_upset_prob.
+    LOO simulation probabilities are only used as a fallback because in rounds 2+
+    the LOO carries forward predicted (not actual) winners, so the teams and
+    probabilities may not correspond to the real matchup.
+    """
     from src.kenpom import load_kenpom
 
     HIST_YEARS   = [y for y in range(2002, 2026) if y != 2020]
@@ -581,7 +617,9 @@ def get_upsets():
 
     seed_tally = {s: {k: 0 for k in ('r32','s16','e8','f4','ncg','champ','total')}
                   for s in range(1, 17)}
-    upset_games: list = []
+
+    # ── Phase 1: collect all upset-eligible matchups ──────────────────────────
+    raw_matchups: list[dict] = []
 
     for year in ALL_YEARS:
         loo_path     = _DATA_DIR / str(year) / 'bracket_loo.json'
@@ -622,7 +660,7 @@ def get_upsets():
                 'team2':   normalize_name(t2r) if t2r else '',
             }
 
-        # ── Seed baselines (historical only) ────────────────────────────────
+        # Seed baselines (historical only)
         if year != 2026:
             for mid, act in act_by_id.items():
                 aw = act['actual_winner']
@@ -638,12 +676,11 @@ def get_upsets():
                 if adv_k and sw and 1 <= sw <= 16:
                     seed_tally[sw][adv_k] += 1
 
-        # ── Upset game entries ───────────────────────────────────────────────
+        # Collect upset-eligible games
         for mid, pred in pred_by_id.items():
             act = act_by_id.get(mid, {})
             rnd = int(pred.get('round', act.get('round', 1)))
 
-            # Use bracket.csv team names (more accurate for 2026 later rounds)
             t1 = act.get('team1') or pred.get('team1', '')
             t2 = act.get('team2') or pred.get('team2', '')
             if not t1 or not t2: continue
@@ -652,42 +689,102 @@ def get_upsets():
             if not s1 or not s2: continue
 
             seed_diff = abs(s1 - s2)
-            if seed_diff < 2: continue        # skip near-coin-flip matchups
+            if seed_diff < 2: continue
 
-            if s1 > s2:                       # t1 is underdog
+            if s1 > s2:   # t1 is underdog
                 fav, und, fs, us = t2, t1, s2, s1
-                p_und = pred.get('prob', 0.5)
-            else:                             # t2 is underdog
+                p_und_loo = pred.get('prob', 0.5)
+            else:
                 fav, und, fs, us = t1, t2, s1, s2
-                p_und = 1.0 - pred.get('prob', 0.5)
+                p_und_loo = 1.0 - pred.get('prob', 0.5)
 
             aw        = act.get('actual_winner')
             completed = bool(aw)
-            upset_happened   = (aw == und) if completed else None
-            model_called_upset = pred.get('winner') == und
-
             sf = act.get('score1') if act.get('team1') == fav else act.get('score2')
             su = act.get('score1') if act.get('team1') == und else act.get('score2')
 
-            upset_games.append({
-                'year':               year,
-                'match_id':           mid,
-                'round':              rnd,
-                'round_name':         ROUND_NAMES.get(rnd, f'R{rnd}'),
-                'region':             pred.get('region', act.get('region','')),
-                'favorite':           fav,
-                'favorite_seed':      fs,
-                'underdog':           und,
-                'underdog_seed':      us,
-                'seed_diff':          seed_diff,
-                'model_upset_prob':   round(p_und, 4),
-                'actual_winner':      aw,
-                'upset_happened':     upset_happened,
-                'model_called_upset': model_called_upset,
-                'completed':          completed,
-                'score_fav':          sf,
-                'score_und':          su,
+            raw_matchups.append({
+                'year': year, 'match_id': mid, 'rnd': rnd,
+                'region': pred.get('region', act.get('region', '')),
+                'fav': fav, 'und': und, 'fs': fs, 'us': us, 'seed_diff': seed_diff,
+                'p_und_loo': p_und_loo,
+                'aw': aw, 'completed': completed,
+                'upset_happened': (aw == und) if completed else None,
+                'sf': sf, 'su': su,
             })
+
+    # ── Phase 2: batch compute model probabilities for actual matchups ────────
+    # The LOO bracket carries forward predicted winners in rounds 2+, so its
+    # probabilities often reflect a different matchup than what actually played.
+    # Running the model on the real teams gives the correct upset probability.
+    model_probs: dict[tuple, float] = {}
+    try:
+        model_obj = _get_model()
+        feat_cols = list(model_obj.feature_names_in_)
+
+        batch_rows:  list[dict]  = []
+        batch_keys:  list[tuple] = []
+        seen_keys:   set         = set()
+
+        for m in raw_matchups:
+            key = (m['year'], m['fav'], m['und'])
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+
+            sf = cache.get_raw_stats(m['year'], m['fav']) if cache else None
+            su = cache.get_raw_stats(m['year'], m['und']) if cache else None
+            if not sf or not su:
+                continue
+
+            row: dict = {}
+            for dc in feat_cols:
+                base = dc[:-5] if dc.endswith('_diff') else dc
+                vf, vu = sf.get(base), su.get(base)
+                if vf is not None and vu is not None:
+                    try:
+                        vff, vuu = float(vf), float(vu)
+                        row[dc] = float('nan') if (np.isnan(vff) or np.isnan(vuu)) else vff - vuu
+                    except (TypeError, ValueError):
+                        row[dc] = float('nan')
+                else:
+                    row[dc] = float('nan')
+            batch_rows.append(row)
+            batch_keys.append(key)
+
+        if batch_rows:
+            X = pd.DataFrame(batch_rows, columns=feat_cols)
+            probs_fav = model_obj.predict_proba(X)[:, 1]  # prob fav wins
+            for key, p_fav in zip(batch_keys, probs_fav):
+                model_probs[key] = 1.0 - float(p_fav)    # prob und wins
+
+    except Exception as e:
+        print(f'[upsets] Batch prediction error: {e}')
+
+    # ── Phase 3: assemble final game list ─────────────────────────────────────
+    upset_games: list = []
+    for m in raw_matchups:
+        key   = (m['year'], m['fav'], m['und'])
+        p_und = model_probs.get(key, m['p_und_loo'])   # actual model; LOO fallback
+        upset_games.append({
+            'year':               m['year'],
+            'match_id':           m['match_id'],
+            'round':              m['rnd'],
+            'round_name':         ROUND_NAMES.get(m['rnd'], f'R{m["rnd"]}'),
+            'region':             m['region'],
+            'favorite':           m['fav'],
+            'favorite_seed':      m['fs'],
+            'underdog':           m['und'],
+            'underdog_seed':      m['us'],
+            'seed_diff':          m['seed_diff'],
+            'model_upset_prob':   round(p_und, 4),
+            'actual_winner':      m['aw'],
+            'upset_happened':     m['upset_happened'],
+            'model_called_upset': p_und > 0.5,
+            'completed':          m['completed'],
+            'score_fav':          m['sf'],
+            'score_und':          m['su'],
+        })
 
     # ── Seed baselines ────────────────────────────────────────────────────────
     baselines: dict = {}
